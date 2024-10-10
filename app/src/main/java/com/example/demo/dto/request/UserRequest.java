@@ -4,6 +4,8 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+
+import javax.validation.constraints.Email;
 import javax.validation.constraints.NotBlank;
 import javax.validation.constraints.Pattern;
 import java.util.List;
@@ -16,10 +18,7 @@ public class UserRequest {
     private String name;
 
     @NotBlank(message = "Email is required")
-    @Pattern(
-            regexp = "^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,6}$",
-            message = "Email does not have a valid format"
-    )
+    @Email( message = "Email does not have a valid format")
     @Schema(description = "Email", example = "string")
     private String email;
 

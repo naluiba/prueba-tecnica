@@ -6,11 +6,13 @@ import com.example.demo.dto.response.UserResponse;
 import com.example.demo.model.Phone;
 import com.example.demo.model.User;
 import com.example.demo.repository.UserRepository;
+import net.bytebuddy.build.BuildLogger;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
-
+import java.util.regex.Pattern;
+import java.util.regex.Matcher;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
@@ -27,33 +29,32 @@ public class UserService {
     @Autowired
     private JwtService jwtService;
     public UserResponse createUser(UserRequest userRequest) throws Exception {
+            Optional<User> existingUser = userRepository.findByEmail(userRequest.getEmail());
+            if (existingUser.isPresent()) {
+                throw new IllegalArgumentException("User with the email " + userRequest.getEmail() + " already exists.");
+            }
 
-        Optional<User> existingUser = userRepository.findByEmail(userRequest.getEmail());
-        if (existingUser.isPresent()) {
-            throw new IllegalArgumentException("User with the email " + userRequest.getEmail() + " already exists.");
-        }
+            User user = new User();
+            user.setName(userRequest.getName());
+            user.setEmail(userRequest.getEmail());
+            user.setPassword(EncryptionService.encrypt(userRequest.getPassword(),secretKey));
+            user.setId(UUID.randomUUID());
+            user.setCreated(LocalDateTime.now());
+            user.setLastLogin(null);
+            user.setPhones(this.createPhones(userRequest.getPhones()));
+            user.setToken(jwtService.generateToken(userRequest.getEmail()));
+            user.setActive(true);
 
-        User user = new User();
-        user.setName(userRequest.getName());
-        user.setEmail(userRequest.getEmail());
-        user.setPassword(EncryptionService.encrypt(userRequest.getPassword(),secretKey));
-        user.setId(UUID.randomUUID());
-        user.setCreated(LocalDateTime.now());
-        user.setLastLogin(null);
-        user.setPhones(this.createPhones(userRequest.getPhones()));
-        user.setToken(jwtService.generateToken(userRequest.getEmail()));
-        user.setActive(true);
+            User savedUser = userRepository.save(user);
 
-        User savedUser = userRepository.save(user);
-
-        return new UserResponse(
-                userRequest,
-                savedUser.getId(),
-                savedUser.getLastLogin(),
-                savedUser.getCreated(),
-                savedUser.getToken(),
-                savedUser.isActive()
-        );
+            return new UserResponse(
+                    userRequest,
+                    savedUser.getId(),
+                    savedUser.getLastLogin(),
+                    savedUser.getCreated(),
+                    savedUser.getToken(),
+                    savedUser.isActive()
+            );
     }
 
     public List<Phone> createPhones(List<PhoneRequest> phones){
@@ -69,10 +70,9 @@ public class UserService {
     }
 
     public UserResponse getUser(String token) throws Exception {
-        String jwtToken = token.substring(7);
-        String username = jwtService.extractEmail(jwtToken);
+        String email = jwtService.extractEmail(token);
 
-        Optional<User> userOptional = userRepository.findByEmail(username);
+        Optional<User> userOptional = userRepository.findByEmail(email);
         if (userOptional.isPresent()) {
             User user = userOptional.get();
 
@@ -80,6 +80,7 @@ public class UserService {
             userRequest.setEmail(user.getEmail());
             userRequest.setName(user.getName());
             userRequest.setPassword(EncryptionService.decrypt(user.getPassword(),secretKey));
+            userRequest.setPhones(this.createPhonesRequest(user.getPhones()));
 
             String newToken = jwtService.generateToken(user.getEmail());
             user.setToken(newToken);
@@ -89,8 +90,8 @@ public class UserService {
             return new UserResponse(
                     userRequest,
                     user.getId(),
-                    user.getLastLogin(),
                     user.getCreated(),
+                    user.getLastLogin(),
                     user.getToken(),
                     user.isActive()
             );
@@ -99,5 +100,16 @@ public class UserService {
         }
     }
 
+    public List<PhoneRequest> createPhonesRequest(List<Phone> phones){
+        List<PhoneRequest> phonesResult = new ArrayList<>();
+        for (Phone elem : phones) {
+            PhoneRequest p = new PhoneRequest();
+            p.setNumber(elem.getNumber());
+            p.setCityCode(elem.getCityCode());
+            p.setCountryCode(elem.getCountryCode());
+            phonesResult.add(p);
+        }
+        return phonesResult;
+    }
 }
 
