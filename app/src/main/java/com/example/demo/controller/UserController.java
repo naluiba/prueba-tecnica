@@ -29,6 +29,7 @@ public class UserController {
     @PostMapping("/sign-up")
     @Operation(summary = "Create user", description = "Create a user")
     public ResponseEntity<?> singUp(@Valid @RequestBody UserRequest userRequest) throws Exception {
+
         UserResponse userResponse = userService.createUser(userRequest);
         return new ResponseEntity<>(userResponse, HttpStatus.CREATED);
     }
@@ -37,8 +38,8 @@ public class UserController {
     @Operation(summary = "Get user",
             description = "Get a user",
             security = @SecurityRequirement(name = "bearerAuth"))
-    public ResponseEntity<?> login(@RequestHeader("Authorization") String token) throws Exception {
-        /*Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+    public ResponseEntity<?> login() throws Exception {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
 
         if (authentication instanceof JwtAuthenticationToken) {
             Jwt jwt = ((JwtAuthenticationToken) authentication).getToken();
@@ -47,11 +48,8 @@ public class UserController {
             UserResponse userResponse = userService.getUser(tokenValue);
             return new ResponseEntity<>(userResponse, HttpStatus.OK);
         } else {
-            return new ResponseEntity<>("Token no encontrado", HttpStatus.UNAUTHORIZED);
-        }*/
-
-        UserResponse userResponse = userService.getUser(token);
-        return new ResponseEntity<>(userResponse, HttpStatus.OK);
+            return new ResponseEntity<>("Token not found", HttpStatus.UNAUTHORIZED);
+        }
     }
 }
 
