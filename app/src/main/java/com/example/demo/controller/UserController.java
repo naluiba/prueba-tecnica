@@ -4,7 +4,6 @@ import com.example.demo.dto.request.UserRequest;
 import com.example.demo.dto.response.UserResponse;
 import com.example.demo.service.UserService;
 import io.swagger.v3.oas.annotations.Operation;
-import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -28,9 +27,14 @@ public class UserController {
     private UserService userService;
     @PostMapping("/sign-up")
     @Operation(summary = "Create user", description = "Create a user")
-    public ResponseEntity<?> singUp(@Valid @RequestBody UserRequest userRequest) throws Exception {
+    public ResponseEntity<?> singUp(@Valid @RequestBody UserRequest userRequest) {
 
-        UserResponse userResponse = userService.createUser(userRequest);
+        UserResponse userResponse = null;
+        try {
+            userResponse = userService.createUser(userRequest);
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
         return new ResponseEntity<>(userResponse, HttpStatus.CREATED);
     }
 

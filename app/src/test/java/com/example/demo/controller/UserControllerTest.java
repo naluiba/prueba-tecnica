@@ -3,7 +3,6 @@ package com.example.demo.controller;
 import com.example.demo.dto.request.PhoneRequest;
 import com.example.demo.dto.request.UserRequest;
 import com.example.demo.dto.response.UserResponse;
-import com.example.demo.exception.GlobalExceptionHandler;
 import com.example.demo.service.UserService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.BeforeEach;
@@ -11,14 +10,9 @@ import org.junit.jupiter.api.Test;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
-import org.springframework.context.annotation.Import;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
-import org.springframework.test.context.junit4.SpringRunner;
+import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
+import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.web.servlet.MockMvc;
-import org.springframework.test.web.servlet.ResultActions;
 
 import java.time.LocalDateTime;
 import java.util.*;
@@ -33,7 +27,10 @@ import static org.springframework.test.web.servlet.result.MockMvcResultHandlers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-@Import(GlobalExceptionHandler.class)
+
+
+@AutoConfigureMockMvc
+@SpringBootTest
 public class UserControllerTest {
 
     @InjectMocks
@@ -44,6 +41,7 @@ public class UserControllerTest {
 
     private MockMvc mockMvc;
     private ObjectMapper objectMapper;
+
 
     @BeforeEach
     public void setUp() {
@@ -65,19 +63,64 @@ public class UserControllerTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(validUserRequest)))
                 .andExpect(status().isCreated())
+                .andDo(print())
                 .andExpect(jsonPath("$.user.name").value("Lucia"));
     }
 
     @Test
     public void testSignUp_InvalidEmail() throws Exception {
-        UserRequest invalidEmailRequest = new UserRequest("Lucia", "lucia-sarasa", "Clave12Pru", new ArrayList<>());
+        List<PhoneRequest> phonesRequest = new ArrayList<>();
+        phonesRequest.add(new PhoneRequest(111111, 1900, "54"));
+        UserRequest invalidEmailRequest = new UserRequest("Lucia", "lucia-sarasa", "Clave12Pru", phonesRequest);
 
         mockMvc.perform(post("/api/users/sign-up")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(invalidEmailRequest)))
                 .andExpect(status().isBadRequest())
                 .andDo(print());
-                //.andExpect(jsonPath("$.errors.email").value("Email does not have a valid format"));
+
+    }
+
+    @Test
+    public void testSignUp_InvalidPassword() throws Exception {
+        UserRequest invalidEmailRequest = new UserRequest("Lucia", "lucia@mail.com", "Clave1234Pru", new ArrayList<>());
+
+        mockMvc.perform(post("/api/users/sign-up")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(invalidEmailRequest)))
+                .andExpect(status().isBadRequest())
+                .andDo(print());
+
+    }
+
+    @Test
+    public void testSignUp_OptionalFields() throws Exception {
+
+        List<PhoneRequest> phonesRequest = new ArrayList<>();
+        phonesRequest.add(new PhoneRequest(0, 0, ""));
+        UserRequest optionalFieldsRequest = new UserRequest("", "lucia@mail.com", "Clave12Pru", phonesRequest);
+
+        mockMvc.perform(post("/api/users/sign-up")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(optionalFieldsRequest)))
+                .andExpect(status().isCreated())
+                .andDo(print());
+
+    }
+
+    @Test
+    public void testSignUp_RequiredFields() throws Exception {
+
+        List<PhoneRequest> phonesRequest = new ArrayList<>();
+        phonesRequest.add(new PhoneRequest(0, 0, ""));
+        UserRequest optionalFieldsRequest = new UserRequest("Lucia", "", "Clave12Pru", phonesRequest);
+
+        mockMvc.perform(post("/api/users/sign-up")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(optionalFieldsRequest)))
+                .andExpect(status().isBadRequest())
+                .andDo(print());
+
     }
 
     @Test
